@@ -5,3 +5,5 @@ python-dotenv>=1.0,<1.1
 django-cors-headers>=4.0,<4.4
 dj-rest-auth>=5.0,<5.1 # Added for easier auth endpoint setup
 djangorestframework-simplejwt>=5.3,<5.4 # Needed by dj-rest-auth for JWT
+django-fernet-fields>=0.7.1 # For application-level field encryption
+cryptography>=3.4 # Dependency for django-fernet-fields

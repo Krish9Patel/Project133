@@ -13,9 +13,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from cryptography.fernet import Fernet, MultiFernet # For encryption key handling
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file in the base directory
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -54,6 +55,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount', # Optional, if you want social login later
     'dj_rest_auth.registration', # For registration endpoints
     'corsheaders', # For handling Cross-Origin Resource Sharing
+    'fernet_fields', # For encrypting model fields
 
     # Local apps
     'api',
@@ -111,6 +113,9 @@ DATABASES = {
         'PASSWORD': DB_PASSWORD,
         'HOST': DB_HOST,
         'PORT': DB_PORT,
+         # Recommended: Enable pgcrypto extension in PostgreSQL
+         # You might need to run 'CREATE EXTENSION IF NOT EXISTS pgcrypto;' in your DB
+        'OPTIONS': {},
     }
 }
 
@@ -149,6 +154,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles_collected' # Define for collectstatic
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -174,8 +180,12 @@ REST_FRAMEWORK = {
 REST_AUTH = {
     'USE_JWT': True,
     'JWT_AUTH_HTTPONLY': False, # Allow JS access to refresh token for frontend renewal
-    'JWT_AUTH_COOKIE': 'mindful-journey-auth', # Cookie name for access token
-    'JWT_AUTH_REFRESH_COOKIE': 'mindful-journey-refresh-token', # Cookie name for refresh token
+    'JWT_AUTH_COOKIE': None, # Set to 'mindful-journey-auth' if using cookies for access token
+    'JWT_AUTH_REFRESH_COOKIE': None, # Set to 'mindful-journey-refresh-token' if using cookies for refresh token
+    # If JWT_AUTH_HTTPONLY is True, set cookies:
+    # 'JWT_AUTH_COOKIE': 'mindful-journey-auth',
+    # 'JWT_AUTH_REFRESH_COOKIE': 'mindful-journey-refresh-token',
+    # 'JWT_AUTH_SAMESITE': 'Lax', # Or 'Strict' or 'None' (requires Secure=True)
     'USER_DETAILS_SERIALIZER': 'api.serializers.CurrentUserSerializer', # Custom user details serializer
     'REGISTER_SERIALIZER': 'api.serializers.CustomRegisterSerializer', # Custom registration serializer
 }
@@ -216,6 +226,7 @@ CORS_ALLOW_CREDENTIALS = True # Important for cookies (like JWT refresh tokens)
 # CSRF settings (Needed if SessionAuthentication is used, e.g., for browsable API/admin)
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS # Trust the frontend origin for CSRF
 
+
 # Password Hashing - Django 4.x defaults to PBKDF2, Argon2 is optional but good
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.Argon2PasswordHasher",
@@ -224,3 +235,101 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
     "django.contrib.auth.hashers.ScryptPasswordHasher",
 ]
+
+# --- Security Settings for Production (HTTPS) ---
+
+# Ensure these are set correctly when deploying behind a reverse proxy (like Nginx or Apache)
+# that handles TLS/SSL termination.
+USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', 'False') == 'True'
+SECURE_PROXY_SSL_HEADER_NAME = os.getenv('SECURE_PROXY_SSL_HEADER_NAME', None) # e.g., 'HTTP_X_FORWARDED_PROTO'
+SECURE_PROXY_SSL_HEADER_VALUE = os.getenv('SECURE_PROXY_SSL_HEADER_VALUE', None) # e.g., 'https'
+
+if not DEBUG:
+    # Basic HTTPS settings if Django serves directly (uncommon in production)
+    # or if proxy doesn't set the header reliably.
+    # It's STRONGLY recommended to handle SSL termination at the proxy level.
+    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'True') == 'True'
+    CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'True') == 'True'
+
+    # If using proxy headers, set these
+    if USE_X_FORWARDED_HOST and SECURE_PROXY_SSL_HEADER_NAME and SECURE_PROXY_SSL_HEADER_VALUE:
+        SECURE_PROXY_SSL_HEADER = (SECURE_PROXY_SSL_HEADER_NAME, SECURE_PROXY_SSL_HEADER_VALUE)
+        # SECURE_SSL_REDIRECT might still be needed depending on proxy setup
+        # Ensure the proxy correctly forwards the protocol header
+
+    # HSTS (HTTP Strict Transport Security) - Recommended for production
+    # Tells browsers to always connect via HTTPS for the specified duration.
+    # Start with a small value (e.g., 3600 = 1 hour) and increase once confirmed working.
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', 0)) # e.g., 31536000 = 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False') == 'True'
+    SECURE_HSTS_PRELOAD = os.getenv('SECURE_HSTS_PRELOAD', 'False') == 'True'
+
+    # Content Security Policy (CSP) - Highly Recommended (Requires careful configuration)
+    # Define sources for scripts, styles, images, etc.
+    # Example (needs customization):
+    # CSP_DEFAULT_SRC = ("'self'",)
+    # CSP_SCRIPT_SRC = ("'self'", 'trusted-cdn.com')
+    # CSP_STYLE_SRC = ("'self'", "'unsafe-inline'") # Be careful with 'unsafe-inline'
+    # MIDDLEWARE.insert(MIDDLEWARE.index('django.middleware.security.SecurityMiddleware') + 1, 'csp.middleware.CSPMiddleware')
+
+
+# --- Field Encryption Settings ---
+# Get the primary encryption key from environment variables
+field_encryption_key_str = os.getenv('FIELD_ENCRYPTION_KEY')
+if not field_encryption_key_str:
+    print("WARNING: FIELD_ENCRYPTION_KEY environment variable not set. Field encryption will not work.")
+    # Define a dummy key for development/testing if absolutely needed, but avoid in production
+    # FIELD_ENCRYPTION_KEYS = [Fernet.generate_key()]
+    FIELD_ENCRYPTION_KEYS = [] # Better to fail loudly if key is missing
+elif not DEBUG:
+    # In production, use the key directly
+    try:
+        # Ensure the key is bytes
+        field_encryption_key_bytes = field_encryption_key_str.encode('utf-8')
+        # Validate the key format (basic check)
+        Fernet(field_encryption_key_bytes)
+        FIELD_ENCRYPTION_KEYS = [field_encryption_key_bytes]
+    except (ValueError, TypeError) as e:
+         print(f"ERROR: Invalid FIELD_ENCRYPTION_KEY format: {e}. Ensure it's a valid Base64 encoded Fernet key.")
+         FIELD_ENCRYPTION_KEYS = [] # Fail if key is invalid
+else:
+     # Allow potentially less secure key handling in DEBUG mode (for ease of setup)
+     field_encryption_key_bytes = field_encryption_key_str.encode('utf-8')
+     FIELD_ENCRYPTION_KEYS = [field_encryption_key_bytes]
+
+# Optional: Support key rotation using MultiFernet
+# fernet_keys_str = os.getenv('FIELD_ENCRYPTION_KEYS_CSV', '')
+# if fernet_keys_str:
+#     keys = [key.strip().encode('utf-8') for key in fernet_keys_str.split(',')]
+#     if keys:
+#         FIELD_ENCRYPTION_KEYS = keys # Uses the first key for encryption, all for decryption
+
+# Note: You MUST keep your encryption keys secure and backed up. Losing the key means losing the data.
+
+# --- Logging Configuration (Example) ---
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING', # Adjust level for production (INFO or WARNING)
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'), # Control Django's logging level
+            'propagate': False,
+        },
+         'api': { # Example: logger for your 'api' app
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+    },
+}
