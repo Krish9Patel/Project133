@@ -1,6 +1,7 @@
+// src/app/register/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,10 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import Link from 'next/link';
 import { UserPlus } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast'; // Assuming hook exists
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation'; // Use App Router's router
 
 // Define the form schema using Zod
 const registerSchema = z.object({
@@ -25,8 +27,13 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
 export default function RegisterPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -37,40 +44,56 @@ export default function RegisterPage() {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
-    console.log('Registration data:', data);
-     // Exclude confirmPassword before sending to backend
-    const { confirmPassword, ...submitData } = data;
+    setIsLoading(true);
+    console.log('Attempting registration for:', data.email);
+    // Exclude confirmPassword before sending to backend
+    const submitData = {
+        email: data.email,
+        password: data.password,
+        // dj-rest-auth registration endpoint also requires password confirmation
+        password2: data.confirmPassword
+    };
 
-    // --- TODO: Implement actual registration API call here ---
-    // Example:
-    // try {
-    //   const response = await fetch('/api/auth/register', { // Your API endpoint
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(submitData),
-    //   });
-    //   if (!response.ok) {
-    //      const errorData = await response.json();
-    //      // Handle specific errors (e.g., email already exists)
-    //      let errorMessage = 'Registration failed.';
-    //      if (errorData.email) errorMessage = errorData.email[0];
-    //      else if (errorData.password) errorMessage = errorData.password[0];
-    //      else if (errorData.detail) errorMessage = errorData.detail;
-    //      throw new Error(errorMessage);
-    //   }
-    //   // Handle successful registration (e.g., show message, redirect to login)
-    //   toast({ title: "Registration Successful", description: "Please log in to continue." });
-    //   // router.push('/login'); // Example redirect
-    // } catch (error: any) {
-    //   toast({ title: "Registration Failed", description: error.message, variant: "destructive" });
-    // }
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/registration/`, { // Use dj-rest-auth registration endpoint
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submitData),
+      });
 
+      const responseData = await response.json();
 
-    // Simulate API call result
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({ title: "Registration Successful", description: "Account created! Please log in." });
-    // Redirect or update state here (e.g., router.push('/login'))
-     form.reset();
+      if (!response.ok) {
+        console.error('Registration failed response:', responseData);
+        // Handle specific errors (e.g., email already exists)
+        let errorMessage = 'Registration failed.';
+        if (responseData.email) errorMessage = `Email: ${responseData.email[0]}`;
+        else if (responseData.password) errorMessage = `Password: ${responseData.password[0]}`;
+        else if (responseData.non_field_errors) errorMessage = responseData.non_field_errors[0];
+        else if (responseData.detail) errorMessage = responseData.detail;
+         // Check for password mismatch error specifically if backend sends it
+        if (responseData.password2 && typeof responseData.password2 === 'string' && responseData.password2.includes("match")) {
+            errorMessage = "Passwords don't match."; // More user-friendly message
+             // Optionally set form error manually if needed, though Zod validation should catch it first
+             form.setError("confirmPassword", { type: "manual", message: "Passwords don't match" });
+        }
+        throw new Error(errorMessage);
+      }
+
+      console.log('Registration successful response:', responseData); // Might contain user details or just a success message
+      toast({ title: "Registration Successful", description: "Account created! Please log in." });
+      router.push('/login'); // Redirect to login page after successful registration
+
+    } catch (error: any) {
+        console.error("Registration error catch block:", error);
+        toast({
+            title: "Registration Failed",
+            description: error.message || "An unexpected error occurred.",
+            variant: "destructive"
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -93,7 +116,7 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Email Address</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="you@example.com" {...field} />
+                      <Input type="email" placeholder="you@example.com" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -106,7 +129,7 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
                     </FormControl>
                      <FormDescription className="text-xs">
                         Minimum 8 characters.
@@ -122,14 +145,14 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Creating Account...' : 'Sign Up'}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Creating Account...' : 'Sign Up'}
               </Button>
             </form>
           </Form>

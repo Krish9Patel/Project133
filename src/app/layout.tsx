@@ -1,8 +1,11 @@
+// src/app/layout.tsx
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google'; // Using Inter font for clean look
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+// Optional: Import an AuthProvider if you create one for context
+// import { AuthProvider } from '@/context/AuthContext'; // Example path
 
 const inter = Inter({
   subsets: ['latin'],
@@ -28,10 +31,14 @@ export default function RootLayout({
           inter.variable
         )}
       >
-        <main className="flex min-h-screen flex-col items-center">
-          {children}
-        </main>
-        <Toaster />
+        {/* Optional: Wrap with AuthProvider if using context */}
+        {/* <AuthProvider> */}
+          {/* Consider adding a Navigation component here */}
+          <main className="flex min-h-screen flex-col items-center pt-16 md:pt-20"> {/* Add padding top for potential fixed nav */}
+            {children}
+          </main>
+          <Toaster />
+        {/* </AuthProvider> */}
       </body>
     </html>
   );
