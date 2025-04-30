@@ -17,7 +17,7 @@ class JournalEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = JournalEntry
-        fields = ['id', 'user', 'user_email', 'content', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'user_email', 'title', 'content', 'created_at', 'updated_at']
         read_only_fields = ['id', 'user', 'user_email', 'created_at', 'updated_at'] # User is set by view
 
     def create(self, validated_data):

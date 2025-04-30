@@ -79,18 +79,17 @@ export default function LoginPage() {
 
       // --- Handle Tokens ---
       // Option 1: Tokens in response body (dj-rest-auth default with USE_JWT=True and no cookies)
-      if (responseData.access_token && responseData.refresh_token) {
-          localStorage.setItem('accessToken', responseData.access_token);
-          localStorage.setItem('refreshToken', responseData.refresh_token);
-          console.log("Tokens stored in localStorage");
-      }
-      // Option 2: Tokens in HttpOnly Cookies (if JWT_AUTH_COOKIE and JWT_AUTH_REFRESH_COOKIE are set in Django)
-      // No explicit action needed here, browser handles cookies. Ensure CORS is set up correctly with Credentials=True.
-      else {
-           console.log("Assuming tokens are set in HttpOnly cookies by the backend.");
-           // Check your Django settings: JWT_AUTH_HTTPONLY=True, JWT_AUTH_COOKIE, JWT_AUTH_REFRESH_COOKIE
-      }
-
+      if (responseData.access && responseData.refresh) { // CORRECTED KEYS
+        localStorage.setItem('accessToken', responseData.access); // CORRECTED KEY
+        localStorage.setItem('refreshToken', responseData.refresh); // CORRECTED KEY
+        console.log("Tokens stored in localStorage"); // This should now be logged
+    }
+    // Option 2: Tokens in HttpOnly Cookies (...)
+    else {
+        // This block should NOT be executed if tokens are in the response body
+        console.log("Assuming tokens are set in HttpOnly cookies by the backend.");
+        // Check your Django settings: JWT_AUTH_HTTPONLY=True, JWT_AUTH_COOKIE, JWT_AUTH_REFRESH_COOKIE
+    }
 
       toast({ title: "Login Successful", description: "Welcome back!" });
       router.push('/'); // Redirect to dashboard/home page after successful login

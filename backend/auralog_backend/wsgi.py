@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mindful_journey_backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'auralog_backend.settings')
 
 application = get_wsgi_application()

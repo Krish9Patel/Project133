@@ -75,7 +75,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware', # Required by allauth
 ]
 
-ROOT_URLCONF = 'mindful_journey_backend.urls'
+ROOT_URLCONF = 'auralog_backend.urls'
 
 TEMPLATES = [
     {
@@ -93,13 +93,13 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'mindful_journey_backend.wsgi.application'
+WSGI_APPLICATION = 'auralog_backend.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DB_NAME = os.getenv('DB_NAME', 'mindful_journey_db')
+DB_NAME = os.getenv('DB_NAME', 'auralog_db')
 DB_USER = os.getenv('DB_USER', 'user')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'password')
 DB_HOST = os.getenv('DB_HOST', 'localhost')
@@ -205,7 +205,13 @@ ACCOUNT_EMAIL_VERIFICATION = 'none' # 'mandatory' is recommended for production,
 # EMAIL_HOST_USER = 'your-email@example.com'
 # EMAIL_HOST_PASSWORD = 'your-email-password'
 # DEFAULT_FROM_EMAIL = 'webmaster@localhost'
+AUTHENTICATION_BACKENDS = (
+    # Default Django backend (needed for admin login by username)
+    'django.contrib.auth.backends.ModelBackend',
 
+    # `allauth` specific authentication methods, such as login by e-mail
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
 
 # Simple JWT settings (used by dj-rest-auth)
 from datetime import timedelta

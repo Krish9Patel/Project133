@@ -10,7 +10,7 @@ def main():
     # Load environment variables from .env file
     dotenv.load_dotenv()
 
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mindful_journey_backend.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'auralog_backend.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

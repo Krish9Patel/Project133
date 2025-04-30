@@ -4,6 +4,9 @@ import { Inter } from 'next/font/google'; // Using Inter font for clean look
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import Link from 'next/link'; 
+import { Button } from '@/components/ui/button'; 
+import { HomeIcon } from 'lucide-react';
 // Optional: Import an AuthProvider if you create one for context
 // import { AuthProvider } from '@/context/AuthContext'; // Example path
 
@@ -30,7 +33,14 @@ export default function RootLayout({
           'min-h-screen bg-background font-sans antialiased',
           inter.variable
         )}
-      >
+        >
+        <div className="absolute top-4 left-4 z-50"> {/* Basic absolute positioning */}
+          <Button asChild variant="outline" size="icon">
+            <Link href="/" aria-label="Home">
+              <HomeIcon className="h-5 w-5" />
+            </Link>
+          </Button>
+        </div>
         {/* Optional: Wrap with AuthProvider if using context */}
         {/* <AuthProvider> */}
           {/* Consider adding a Navigation component here */}

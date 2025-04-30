@@ -25,23 +25,17 @@ class JournalEntry(models.Model):
         auto_now=True,
         help_text="Timestamp when the entry was last updated."
     )
-
+    title = models.CharField(max_length=200, default="Untitled Entry") 
+    content = EncryptedTextField(
+        help_text="The encrypted rich text content of the journal entry."
+    )
     class Meta:
         ordering = ['-created_at'] # Default ordering: newest first
         verbose_name = "Journal Entry"
         verbose_name_plural = "Journal Entries"
 
     def __str__(self):
-        # Avoid decrypting content for __str__ representation if possible
-        # Or show a placeholder
-        content_preview = "Encrypted Content"
-        # If you need a snippet, you'd have to decrypt, which might be slow for lists
-        # try:
-        #     content_preview = self.content[:50] + '...' if len(self.content) > 50 else self.content
-        # except Exception: # Catch potential decryption errors
-        #     content_preview = "[Decryption Error]"
-
-        return f"Entry by {self.user.username or self.user.email} on {self.created_at.strftime('%Y-%m-%d %H:%M')} - {content_preview}"
+         return f"Entry '{self.title}' by {self.user.username or self.user.email} on {self.created_at.strftime('%Y-%m-%d %H:%M')}"
 
 
 class MoodLog(models.Model):
