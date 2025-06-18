@@ -1,9 +1,7 @@
 # Mindful Journey
-This project contains both a Next.js frontend and a Django backend for the Mindful Journey application.
+Mindful Journey is a web application intended to help improve mental health for users. It includes features such as a meditation timer, journaling, AI analytics, mood tracking, and more. This project contains both a Next.js frontend and a Django backend.
 
 ## Frontend (Next.js - `src` directory)
-
-This is a NextJS starter in Firebase Studio.
 
 To get started with the frontend:
 
