@@ -1,5 +1,5 @@
-# AuraLog
-This project contains both a Next.js frontend and a Django backend for the AuraLog application.
+# Mindful Journey
+This project contains both a Next.js frontend and a Django backend for the Mindful Journey application.
 
 ## Frontend (Next.js - `src` directory)
 
@@ -20,7 +20,7 @@ To get started with the frontend:
 
 ## Backend (Django - `backend` directory)
 
-The backend provides the API for the Aura Log application.
+The backend provides the API for the application.
 
 ### Backend Setup:
 
